@@ -1,12 +1,13 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const date = require(__dirname + "/date.js")
+// const date = require(__dirname + "/date.js")
 const port = 8000;
+
+const mongoose = require("./config/mongoose");
+const list = require("./model/item")
 
 const app = express();
 
-const items = ["Buy Food", "Cook Food", "Eat Food"];
-const workItem = [];
 
 app.set("view engine", "ejs");
 app.set(__dirname + "/views");
@@ -17,13 +18,19 @@ app.use(express.static("public"));
 app.get("/", function(req, res){
 
     // let day = date.getDate();
-    let day = date.getDay();
+    // let day = date.getDay();
 
-    res.render("list", {
-        listTitle: day,
-        newListItems: items
+    list.find({}, (err, items) => {
+        if(err){
+            console.log("Error in fetching item from db");
+            return;
+        }
+
+        res.render("list", {
+            listTitle: "Today",
+            newListItems: items
+        })
     })
-
 
 });
 
@@ -31,19 +38,31 @@ app.post("/", function(req, res){
 
     let item = req.body.newInput;
 
-    if(req.body.list === "Work List"){
-        workItem.push(item);
-        return res.redirect("/work")
+    list.create({
+        name: req.body.newInput
+    }, (err, newItem) => {
+        if(err){
+            console.log("error in creating a itme!");
+            return;
+        }
+        // console.log("**********", newItem);
+        return res.redirect("/")
 
-    }
-    else{
-        items.push(item);
-        return res.redirect("/");
-    }
+    })
+
+    // if(req.body.list === "Work List"){
+    //     workItem.push(item);
+    //     return res.redirect("/work")
+
+    // }
+    // else{
+    //     items.push(item);
+    //     return res.redirect("/");
+    // }
 
 });
 
-app.get("/work", function(req, res){
+app.get("/", function(req, res){
     res.render("list", {
         listTitle: "Work List",
         newListItems: workItem
@@ -57,6 +76,18 @@ app.get("/work", function(req, res){
 
 //     return res.redirect("/");
 // });
+app.post("/delete", (req, res) => {
+
+    // console.log(req.body.checkbox)
+    list.findByIdAndDelete(req.body.checkbox, (err) => {
+        if(err){
+            console.log("error in deleting an item!");
+            return;
+        }
+        return res.redirect("/");
+    })
+})
+
 
 app.listen(port, function(err){
     if(err){
